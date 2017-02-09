@@ -38,10 +38,79 @@ C# 可以在定义类型时的同时赋值：
 JIT编译器在每调用一个方法时，会检查引用了哪些类型，如果有任何一个类型定义了类型构造器，JIT编译器就会检查当前AppDomain下该构造器是否已经执行过，没有则在生成的本机代码中添加对他的调用（使用互斥锁保证线程安全，只会执行一次）。
 
 定义静态变量时赋值：
+
     private static int m_x = 10;
+
 同上面一节一样，C#编译器在幕后也会生成静态构造器去执行初始化操作
 
 ## 4 操作符重载方法
+>操作符重载是一个好工具，允许开发人员用简洁的方法表达自己的想法
+
 clr不知道操作符，也不知道操作符重载，编译器在遇见操作符时会生成对应的代码让clr执行。
+
+当编译器检测到操作符时，会查找是否有包含specialname标记的对应的op_*方法，如果有，则解析成对该方法的调用，否则报告编译错误。
+
+>clr对操作符一无所知，但他规定了语言应该如何公开操作符重载，以便由另一种语言的代码使用。
+
+## 5 转换操作符
+转换操作符的使用语法：
+    
+    public static implicit operator Rational(Int32 num)
+    {
+        return new Rational(num);
+    }
+	public static explicit operator Rational(Single num)
+    {
+        return new Rational(num);
+    }
+
+clr要求转换操作符重载方法必须是public static。
+
+C#要求参数类型或者返回类型必须与该方法所在的类型相同
+
+implicit关键字告诉编译器生成代码来调用方法，这样编写源代码时就不用显式转型，explicit关键字则相反。implicit关键字之后是operator关键字，这告诉编译器该方法是一个转换操作符，后面的Rational是要转换的目标类型，括号中的参数是我们要从什么类型转换。
+
+有了上述的代码之后我们就可以编写这样的代码来生成Rational类型的实例：
+
+    Rational r1 = 3;
+    Rational r2 = (Rational)5f;
+
+## 6 扩展方法
+扩展方法使得我们可以自己定义静态方法，然后像调用实例方法一样去调用他们。编译器为此做的工作就是在未找到类型对应的实例方法时，继续查找是否用静态类定义了同名方法，并且该方法的第一个参数与表达式的类型相同且标识为this，其后的参数与该方法的参数相同。如果找到了就生成代码去调用他。
+
+编译器要在静态类中查找相应的扩展方法，为了提高查找速度，要求我们在使用扩展方法的类中引用定义扩展方法的类所在的命名空间。
+
+## 6 分布方法
+可以将类型定义在多个文件中，一个文件只声明方法，在另一个文件中包含了方法的实现。这样的方法用partial标识，表示分部方法
+    
+	public partial class Person
+	{
+		partial void Run();
+		partial void Eat();
+		partial void Walk();
+	}
+	public partial class Person
+	{
+		partial void Run()
+		{
+			Console.WriteLine("I'm running...");
+		}
+	}
+
+编译器会生成如下的类：
+
+    public class Person
+	{
+		private void Run()
+		{
+			Console.WriteLine("I'm running...");
+		}
+	}
+
+* 只能声明在分布类或结构中
+* 分布方法必须返回void
+* 不能添加修饰符
+
+
 
 
